@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" href="/static/assets/favicon.ico">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.1/css/bulma.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.1/css/bulma.min.css.map" rel="stylesheet">
+    <link href="//raw.githubusercontent.com/l-lin/font-awesome-animation/master/dist/font-awesome-animation.min.css" rel="stylesheet">
+    <link href="//unpkg.com/vue2-datatable-component/dist/min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.7/semantic.min.css" rel="stylesheet">
+    <link href="https://handsontable.com/bower_components/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.32.0/codemirror.min.css" rel="stylesheet">
+    <link href="https://codemirror.net/theme/rubyblue.css" rel="stylesheet">
+    
+    <script src="https://handsontable.com/bower_components/handsontable/dist/handsontable.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.32.0/codemirror.min.js"></script>
+    <script src="https://codemirror.net/addon/display/autorefresh.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.10/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.slim.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.0.1/vuex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.1/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-codemirror@4.0.2/dist/vue-codemirror.min.js"></script>
+    <script src="//unpkg.com/vue2-datatable-component/dist/min.js"></script>
+    <script src="/static/js/vue-socketio.min.js"></script>
+    <style>
+        .hot_div {
+          box-sizing: border-box;
+          padding-top: 0px;
+          width: 100%;
+          overflow: hidden;
+          font-size: 0.9rem;
+          height: 300px;
+        }
+
+        .action-btn {
+          padding-top: 1px;
+          padding-bottom: 1px;
+        }
+        
+        .action-btn.is-small {
+          font-size: 0.75rem;
+        }
+        
+        
+        .notification-overlay {
+          z-index: 10;
+          position: absolute;
+          margin-left:auto;
+          margin-right:0;
+          max-width: 500px;
+        }
+
+        .slide-fade-enter-active {
+          transition: all .3s ease;
+        }
+        .slide-fade-leave-active {
+          transition: all .1s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+        }
+        .slide-fade-enter, .slide-fade-leave-to
+        /* .slide-fade-leave-active below version 2.1.8 */ {
+          transform: translateX(10px);
+          opacity: 0;
+        }
+
+        .task-running {color: blue}
+        .task-complete {color: greenyellow}
+        .task-pending {color: orange}
+        .task-failed {color: red}
+    </style>
+
+    <title>Data-Tx</title>
+  </head>
+
+  <body>
+    <div class="container is-fluid"  id="app">
+      <transition name="slide-fade">
+        <div class="notification-overlay notification is-warning" v-if="toggles.show_notification">
+          <button class="delete" @click="toggle('show_notification')"></button>
+          {{ settings.notif_text }}
+        </div>
+      </transition>
+      <center>
+        <h1 class="title">Data-Tx</h1>
+      </center>
+      <div class="notification">
+        <div class="field has-addons">
+          <div class="control is-expanded" @keyup.27="clear_input">
+            <input class="input" type="text" placeholder="Enter YAML config path" v-model="inputs.config_path" list="list_recent_files">
+          </div>
+          <div class="control">
+            <a class="button is-info" @click="load_config(inputs.config_path)">Load</a>
+          </div>
+          <div class="control">
+            <a class="button is-success" @click="save_config(inputs.config_path)">Save</a>
+          </div>
+        </div>
+      </div>
+      <a class="button is-success" @click="toggle('show_modal_read_only')">Show RO Modal</a>
+      <a class="button is-success" @click="toggle_modal('modal_modify', 'view_task_details')">Show MD Modal</a>
+      <a class="button is-success" @click="create_table_tasks">Recreate Table</a>
+      <a class="button is-success" @click="toggle('show_modal_editor')">Show editor</a>
+      <a class="button is-success" @click="toggle('show_notification')">Show notification</a>
+
+      
+      <!-- Tasks Header -->
+      <div class="columns" style="margin-bottom: 0px">
+        <div class="column">
+          <h2 class="title is-2">TASKS</h2>
+        </div>
+        <div class="column" style="padding-top: 18px; padding-bottom: 0px">
+          <div class="control" :class="{ 'is-loading': toggles['filter_tasks_loading'] }" @keyup.27="clear_input">
+            <input class="input" type="text" placeholder="Search Tasks..." v-model="inputs.search_tasks">
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks Table -->
+      <div class="hot_div">
+        <div id="table_tasks"></div>
+      </div>
+
+      
+      <!-- Queue Header -->
+      <h2 class="title is-2">QUEUE</h2>
+
+      <!-- Queue Table -->
+      <table class="table">
+        <thead>
+          <tr>
+            <th v-for="field in history.fields">{{ form_label(field) }}</th>
+            <th> Actions </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in history.rows" v-if="row.status == 'Running'">
+            <!-- <td v-for="field in history.fields"> {{ row[field] }} </td> -->
+            <td> {{ row.task_id }} </td>
+            <td> {{ row.task_type }} </td>
+            <td> {{ row.source_system }} </td>
+            <td> {{ row.source_object }} </td>
+            <td> {{ row.target_system }} </td>
+            <td :class="{'task-running': row.status == 'Running', 'task-complete': row.status == 'Completed', 'task-pending': row.status == 'Pending', 'task-failed': row.status == 'Failed'}"> {{ row.status }} </td>
+            <td> {{ get_duration(row) }} </td>
+            <td>
+              <a title="See Details" class="button action-btn is-small" @click="show_modal_queue_task(row.task_id)"><i class="icon-info"></i></a>
+              <a title="See Log" class="button action-btn is-small is-info" @click="show_modal_task_log(row.task_id)"><i class="icon-file-text"></i></a>
+              <a title="Cancel Task" class="button action-btn is-small is-danger" @click="cancel_task(row.task_id)"><i class="icon-remove"></i></a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- History Header -->
+      <br>
+      <div class="columns" style="margin-bottom: 0px">
+        <div class="column">
+          <h2 class="title is-2">HISTORY</h2>
+        </div>
+        <div class="column" style="padding-top: 18px; padding-bottom: 0px">
+          <div class="control" @keyup.27="clear_input">
+            <input class="input" type="text" placeholder="Search History..." v-model="inputs.search_history">
+          </div>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="hot_div">
+        <div id="table_history"></div>
+      </div>
+      <!-- <table class="table">
+        <thead>
+          <tr>
+            <th v-for="field in history.fields">{{ form_label(field) }}</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in history.rows">
+            <td v-for="field in history.fields"> {{ row[field] }} </td>
+            <td> {{ get_duration(row) }} </td>
+          </tr>
+        </tbody>
+      </table> -->
+
+
+
+      <!-- Modals -->
+
+      <div class="modal" :class="{ 'is-active': toggles['show_modal_read_only'] }">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">{{ settings.modal_read_only.title }}</p>
+            <button class="delete" aria-label="close" @click="toggle('show_modal_read_only')"></button>
+          </header>
+          <section class="modal-card-body">
+            <div class="field is-horizontal" v-for="(input, label) in settings.modal_read_only.inputs" v-bind:key="input.title">
+              <div class="field-label is-normal">
+                <label class="label">{{ label }}</label>
+              </div>
+              <div class="field-body">
+                <div class="field">
+                  <div class="control" @keyup.27="clear_input">
+                    <input class="input" type="text" :title="label" v-model="input" :name="form_name(label)" readonly>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <footer class="modal-card-foot">
+            <button class="button" @click="toggle('show_modal_read_only')">Close</button>
+          </footer>
+        </div>
+      </div>
+
+      <div class="modal" :class="{ 'is-active': toggles['show_modal_modify'] }">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">{{ settings.modal_modify.title }}</p>
+            <button class="delete" aria-label="close" @click="toggle('show_modal_modify')"></button>
+          </header>
+          <form method="post" id="modal_modify_form" class="modal-card-body">
+              <div class="field is-horizontal" v-for="(input, label) in settings.modal_modify.inputs" v-bind:key="input.title">
+                <div class="field-label is-normal">
+                  <label class="label">{{ label }}</label>
+                </div>
+                <div class="field-body">
+                  <div class="field">
+                    <div class="control" @keyup.27="clear_input">
+                      <input class="input" type="text" :title="label" v-model="input" :name="form_name(label)" v-if="form_name(label) in {'source_system':'', 'target_system':''}" list="list_databases">
+                      <input class="input" type="text" :title="label" v-model="input" :name="form_name(label)" v-else-if="form_name(label) in {'task_type':''}" readonly>
+                      <input class="input" type="text" :title="label" v-model="input" :name="form_name(label)" v-else >
+                    </div>
+                  </div>
+                </div>
+              </div>
+          </form>
+          <footer class="modal-card-foot">
+            <button class="button" v-for="(btn_obj, name) in settings.modal_modify.buttons" :class="btn_obj.class" @click="btn_obj.func" > {{ name }}</button>
+          </footer>
+        </div>
+      </div>
+
+
+      <div class="modal" :class="{ 'is-active': toggles['show_modal_editor'] }">
+          <div class="modal-background"></div>
+          <div class="modal-card">
+            <header class="modal-card-head">
+              <p class="modal-card-title">{{ settings.modal_editor.title }}</p>
+              <button class="delete" aria-label="close" @click="toggle('show_modal_editor')"></button>
+            </header>
+            <section class="modal-card-body">
+              <!-- <div id="main_editor_div" :style="{'height': settings.modal_editor.height}"> -->
+                <codemirror ref="main_editor" v-model="settings.modal_editor.text" :options="settings.modal_editor.options"
+                @ready="onEditorReady" @focus="onEditorFocus" @change="onEditorCodeChange">
+                </codemirror>
+              <!-- </div> -->
+            </section>
+            <footer class="modal-card-foot">
+              <button class="button" @click="toggle('show_modal_editor')">Close</button>
+            </footer>
+          </div>
+        </div>
+
+      
+      <datalist id="list_recent_files">
+          <option :value="filep" v-for="filep in settings.recent_files">
+      </datalist>
+      <datalist id="list_databases">
+          <option :value="db" v-for="db in Object.keys(databases)">
+      </datalist>
+    </div>  <!-- End of App -->
+  </body>
+  <!-- <script src="/static/build.js"></script> -->
+  <script src="/static/js/js-helpers.js"></script>
+  <script src="/static/js/vue-components.js"></script>
+  <script src="/static/js/vue-store.js"></script>
+  <script src="/static/js/vue-main.js"></script>
+  <script src="/static/js/main.js"></script>
+</html>

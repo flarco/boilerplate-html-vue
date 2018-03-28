@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" href="/static/assets/favicon.ico">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.1/css/bulma.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.1/css/bulma.min.css.map" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
+    <link href="//cdn.datatables.net/plug-ins/1.10.16/features/searchHighlight/dataTables.searchHighlight.css" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.10/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.slim.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.0.1/vuex.min.js"></script>
+    <script src="/static/js/vue-socketio.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <script src="//cdn.datatables.net/plug-ins/1.10.16/features/searchHighlight/dataTables.searchHighlight.min.js"></script>
+    <script src="//bartaz.github.io/sandbox.js/jquery.highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue2-datatable-component@2.2.2/dist/min.min.js"></script>
+
+    <title>App-DT</title>
+  </head>
+
+  <body>
+    <div id="app">
+      <nav class="navbar is-transparent">
+        <div class="navbar-brand">
+          <a class="navbar-item" href="/">
+            <img src="/static/assets/text-tagger.png">
+          </a>
+        </div>
+      
+        <div id="navbarExampleTransparentExample" class="navbar-menu">
+          <div class="navbar-start">
+            <div class="navbar-item has-dropdown is-hoverable">
+              <a class="navbar-link" href="/">
+                Sources
+              </a>
+              <div class="navbar-dropdown is-boxed">
+                <a class="navbar-item" onclick="vm.set_source('SIEBEL')">
+                  Source 1
+                </a>
+                <a class="navbar-item" onclick="vm.set_source('TABS')">
+                  Source 2
+                </a>
+              </div>
+            </div>
+            <div class="navbar-item">
+              <div class="field is-grouped">
+                <p class="control">
+                  <a class="button is-info" onclick="vm.get_next_untagged()">
+                    <span class="icon">
+                      <i class="icon-share-alt"></i>
+                    </span>
+                    <span>Get Next Un-Tagged</span>
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+      
+          <div class="navbar-end">
+            <div class="navbar-item">
+              <div class="field is-grouped">
+                <p class="control">
+                    <i :class="{'icon-refresh icon-spin': isLoading()}"></i>
+                </p>
+              </div>
+            </div>
+            <div class="navbar-item">
+              <div class="field is-grouped">
+                <p class="control">
+                    <strong><span style="color:blue">{{source}}</span></strong>
+                </p>
+              </div>
+            </div>
+            <div class="navbar-item">
+              <div class="field is-grouped">
+                <p class="control">
+                  <a class="button is-primary" href="mailto:fritz.larco@thehartford.com">
+                    <span class="icon">
+                      <i class="icon-envelope"></i>
+                    </span>
+                    <span>Get Help</span>
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <div class="container is-fluid">
+        <hr/>
+        <table id="table1" class="display" width="100%">
+        </table>
+        <hr/>
+      </div>
+    </div>
+  </body>
+  <!-- <script src="/static/build.js"></script> -->
+  <script src="/static/js/js-helpers.js"></script>
+  <script src="/static/js/vue-components.js"></script>
+  <script src="/static/js/vue-store.js"></script>
+  <script src="/static/js/vue-main.js"></script>
+  <script src="/static/js/main.js"></script>
+</html>
