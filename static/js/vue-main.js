@@ -1,4 +1,4 @@
-Vue.use(VueSocketio, 'http://' + document.domain + ':' + location.port);
+Vue.use(VueSocketio, location.protocol + '//' + document.domain + ':' + location.port);
 
 window.vm = new Vue({
   el: '#app',
